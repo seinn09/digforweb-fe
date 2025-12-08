@@ -1,6 +1,8 @@
-import React from 'react';
-import { useApp } from '../../context/AppContext';
-import { ArrowLeft, Calendar, FileText, Edit2, Trash2, User, Package, Activity } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, Calendar, User, FileText, Edit2, Trash2, Loader2 } from 'lucide-react';
+import { kasusService } from '../../services/kasusService';
+import type { Case } from '../../types/api';
+import { usePermissions } from '../../hooks/usePermissions';
 
 interface CaseDetailProps {
   caseId: string;
@@ -9,34 +11,63 @@ interface CaseDetailProps {
 }
 
 export function CaseDetail({ caseId, onBack, onEdit }: CaseDetailProps) {
-  const { cases, victims, evidence, forensicActions, deleteCase } = useApp();
-  const caseItem = cases.find(c => c.id === caseId);
-  const victim = caseItem ? victims.find(v => v.id === caseItem.victimId) : null;
-  const relatedEvidence = evidence.filter(e => e.caseId === caseId);
-  const relatedActions = forensicActions.filter(a => a.caseId === caseId);
+  const { canUpdate, canDelete } = usePermissions();
+  const [caseData, setCaseData] = useState<Case | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  if (!caseItem) {
+  useEffect(() => {
+    fetchCase();
+  }, [caseId]);
+
+  const fetchCase = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const data = await kasusService.getCaseById(Number(caseId));
+      setCaseData(data);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load case data');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!caseData) return;
+    
+    if (window.confirm(`Are you sure you want to delete case "${caseData.jenis_kasus}"?`)) {
+      try {
+        await kasusService.deleteCase(Number(caseId));
+        onBack();
+      } catch (err: any) {
+        alert('Failed to delete case: ' + err.message);
+      }
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="p-8 flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+        <span className="ml-3 text-slate-400">Loading case details...</span>
+      </div>
+    );
+  }
+
+  if (error || !caseData) {
     return (
       <div className="p-8">
         <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-6 text-center">
-          <p className="text-red-400">Case not found</p>
-          <button
-            onClick={onBack}
-            className="mt-4 text-blue-400 hover:text-blue-300"
-          >
+          <p className="text-red-400">{error || 'Case not found'}</p>
+          <button onClick={onBack} className="mt-4 text-blue-400 hover:text-blue-300">
             Go back
           </button>
         </div>
       </div>
     );
   }
-
-  const handleDelete = () => {
-    if (window.confirm(`Are you sure you want to delete case "${caseItem.caseType}"? This will also delete all related evidence and forensic actions.`)) {
-      deleteCase(caseItem.id);
-      onBack();
-    }
-  };
 
   return (
     <div className="p-8">
@@ -50,42 +81,53 @@ export function CaseDetail({ caseId, onBack, onEdit }: CaseDetailProps) {
 
       <div className="mb-6 flex items-start justify-between">
         <div>
-          <h1 className="text-white text-3xl mb-2">{caseItem.caseType}</h1>
+          <h1 className="text-white text-3xl mb-2">{caseData.jenis_kasus}</h1>
           <p className="text-slate-400">Case Details</p>
         </div>
         <div className="flex gap-2">
-          <button
-            onClick={() => onEdit(caseItem.id)}
-            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
-          >
-            <Edit2 className="w-4 h-4" />
-            Edit
-          </button>
-          <button
-            onClick={handleDelete}
-            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
-          >
-            <Trash2 className="w-4 h-4" />
-            Delete
-          </button>
+          {canUpdate && (
+            <button
+              onClick={() => onEdit(caseId)}
+              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
+            >
+              <Edit2 className="w-4 h-4" />
+              Edit
+            </button>
+          )}
+          {canDelete && (
+            <button
+              onClick={handleDelete}
+              className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
+            >
+              <Trash2 className="w-4 h-4" />
+              Delete
+            </button>
+          )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-slate-900 border border-slate-800 rounded-lg p-6">
           <h2 className="text-white text-xl mb-4">Case Information</h2>
           <div className="space-y-4">
             <div>
-              <label className="text-slate-400 text-sm">Case Type</label>
-              <p className="text-white mt-1">{caseItem.caseType}</p>
+              <label className="text-slate-400 text-sm">Jenis Kasus</label>
+              <p className="text-white mt-1">{caseData.jenis_kasus}</p>
+            </div>
+            <div>
+              <label className="text-slate-400 text-sm flex items-center gap-2">
+                <User className="w-4 h-4" />
+                Korban
+              </label>
+              <p className="text-white mt-1">{caseData.korban?.nama || 'N/A'}</p>
             </div>
             <div>
               <label className="text-slate-400 text-sm flex items-center gap-2">
                 <Calendar className="w-4 h-4" />
-                Incident Date
+                Tanggal Kejadian
               </label>
               <p className="text-white mt-1">
-                {new Date(caseItem.incidentDate).toLocaleDateString('en-US', {
+                {new Date(caseData.tanggal_kejadian).toLocaleDateString('id-ID', {
                   year: 'numeric',
                   month: 'long',
                   day: 'numeric'
@@ -94,27 +136,13 @@ export function CaseDetail({ caseId, onBack, onEdit }: CaseDetailProps) {
             </div>
             <div>
               <label className="text-slate-400 text-sm">Status</label>
-              <p className="mt-1">
-                <span className={`px-3 py-1 rounded-full text-sm inline-block ${
-                  caseItem.status.toLowerCase() === 'active'
-                    ? 'bg-green-500/10 text-green-400 border border-green-500/20'
-                    : caseItem.status.toLowerCase() === 'pending'
-                    ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
-                    : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
-                }`}>
-                  {caseItem.status}
-                </span>
-              </p>
-            </div>
-            <div>
-              <label className="text-slate-400 text-sm flex items-center gap-2">
-                <User className="w-4 h-4" />
-                Linked Victim
-              </label>
-              <p className="text-white mt-1">{victim ? victim.name : 'Unknown'}</p>
-              {victim && (
-                <p className="text-slate-500 text-sm mt-1">{victim.contact}</p>
-              )}
+              <span className={`inline-block mt-1 px-3 py-1 rounded-full text-sm ${
+                caseData.status_kasus.toLowerCase().includes('investigasi')
+                  ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+                  : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
+              }`}>
+                {caseData.status_kasus}
+              </span>
             </div>
           </div>
         </div>
@@ -122,70 +150,11 @@ export function CaseDetail({ caseId, onBack, onEdit }: CaseDetailProps) {
         <div className="bg-slate-900 border border-slate-800 rounded-lg p-6">
           <h2 className="text-white text-xl mb-4 flex items-center gap-2">
             <FileText className="w-5 h-5" />
-            Case Summary
+            Ringkasan Kasus
           </h2>
           <p className="text-slate-300 leading-relaxed whitespace-pre-wrap">
-            {caseItem.caseSummary}
+            {caseData.ringkasan_kasus || 'Tidak ada ringkasan'}
           </p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-slate-900 border border-slate-800 rounded-lg">
-          <div className="p-6 border-b border-slate-800">
-            <h2 className="text-white text-xl flex items-center gap-2">
-              <Package className="w-5 h-5" />
-              Evidence ({relatedEvidence.length})
-            </h2>
-          </div>
-          <div className="divide-y divide-slate-800">
-            {relatedEvidence.length > 0 ? (
-              relatedEvidence.map((evidenceItem) => (
-                <div key={evidenceItem.id} className="p-4 hover:bg-slate-800/30 transition-colors">
-                  <h3 className="text-white mb-1">{evidenceItem.evidenceType}</h3>
-                  <p className="text-slate-400 text-sm mb-2">{evidenceItem.storageLocation}</p>
-                  <p className="text-slate-500 text-xs font-mono">{evidenceItem.hashValue}</p>
-                </div>
-              ))
-            ) : (
-              <div className="p-8 text-center text-slate-500">
-                No evidence collected yet
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="bg-slate-900 border border-slate-800 rounded-lg">
-          <div className="p-6 border-b border-slate-800">
-            <h2 className="text-white text-xl flex items-center gap-2">
-              <Activity className="w-5 h-5" />
-              Forensic Actions ({relatedActions.length})
-            </h2>
-          </div>
-          <div className="divide-y divide-slate-800">
-            {relatedActions.length > 0 ? (
-              relatedActions.map((action) => (
-                <div key={action.id} className="p-4 hover:bg-slate-800/30 transition-colors">
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="text-white">{action.forensicStage}</h3>
-                    <span className={`px-2 py-1 rounded text-xs ${
-                      action.status.toLowerCase() === 'completed'
-                        ? 'bg-green-500/10 text-green-400'
-                        : 'bg-yellow-500/10 text-yellow-400'
-                    }`}>
-                      {action.status}
-                    </span>
-                  </div>
-                  <p className="text-slate-400 text-sm mb-2">{action.actionDescription}</p>
-                  <p className="text-slate-500 text-xs">PIC: {action.pic}</p>
-                </div>
-              ))
-            ) : (
-              <div className="p-8 text-center text-slate-500">
-                No forensic actions recorded yet
-              </div>
-            )}
-          </div>
         </div>
       </div>
     </div>

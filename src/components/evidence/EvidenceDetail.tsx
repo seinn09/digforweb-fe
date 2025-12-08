@@ -1,6 +1,8 @@
-import React from 'react';
-import { useApp } from '../../context/AppContext';
-import { ArrowLeft, Package, MapPin, Hash, Clock, FileText, Edit2, Trash2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, Package, Hash, Calendar, MapPin, Edit2, Trash2, Loader2 } from 'lucide-react';
+import { evidenceService } from '../../services/evidenceService';
+import type { Evidence } from '../../types/api';
+import { usePermissions } from '../../hooks/usePermissions';
 
 interface EvidenceDetailProps {
   evidenceId: string;
@@ -9,32 +11,63 @@ interface EvidenceDetailProps {
 }
 
 export function EvidenceDetail({ evidenceId, onBack, onEdit }: EvidenceDetailProps) {
-  const { evidence, cases, deleteEvidence } = useApp();
-  const evidenceItem = evidence.find(e => e.id === evidenceId);
-  const caseItem = evidenceItem ? cases.find(c => c.id === evidenceItem.caseId) : null;
+  const { canUpdate, canDelete } = usePermissions();
+  const [evidence, setEvidence] = useState<Evidence | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  if (!evidenceItem) {
+  useEffect(() => {
+    fetchEvidence();
+  }, [evidenceId]);
+
+  const fetchEvidence = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const data = await evidenceService.getEvidenceById(Number(evidenceId));
+      setEvidence(data);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load evidence data');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!evidence) return;
+    
+    if (window.confirm(`Are you sure you want to delete evidence "${evidence.jenis_bukti}"?`)) {
+      try {
+        await evidenceService.deleteEvidence(Number(evidenceId));
+        onBack();
+      } catch (err: any) {
+        alert('Failed to delete evidence: ' + err.message);
+      }
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="p-8 flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+        <span className="ml-3 text-slate-400">Loading evidence details...</span>
+      </div>
+    );
+  }
+
+  if (error || !evidence) {
     return (
       <div className="p-8">
         <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-6 text-center">
-          <p className="text-red-400">Evidence not found</p>
-          <button
-            onClick={onBack}
-            className="mt-4 text-blue-400 hover:text-blue-300"
-          >
+          <p className="text-red-400">{error || 'Evidence not found'}</p>
+          <button onClick={onBack} className="mt-4 text-blue-400 hover:text-blue-300">
             Go back
           </button>
         </div>
       </div>
     );
   }
-
-  const handleDelete = () => {
-    if (window.confirm(`Are you sure you want to delete evidence "${evidenceItem.evidenceType}"?`)) {
-      deleteEvidence(evidenceItem.id);
-      onBack();
-    }
-  };
 
   return (
     <div className="p-8">
@@ -48,52 +81,72 @@ export function EvidenceDetail({ evidenceId, onBack, onEdit }: EvidenceDetailPro
 
       <div className="mb-6 flex items-start justify-between">
         <div>
-          <h1 className="text-white text-3xl mb-2">{evidenceItem.evidenceType}</h1>
+          <h1 className="text-white text-3xl mb-2">{evidence.jenis_bukti}</h1>
           <p className="text-slate-400">Evidence Details</p>
         </div>
         <div className="flex gap-2">
-          <button
-            onClick={() => onEdit(evidenceItem.id)}
-            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
-          >
-            <Edit2 className="w-4 h-4" />
-            Edit
-          </button>
-          <button
-            onClick={handleDelete}
-            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
-          >
-            <Trash2 className="w-4 h-4" />
-            Delete
-          </button>
+          {canUpdate && (
+            <button
+              onClick={() => onEdit(evidenceId)}
+              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
+            >
+              <Edit2 className="w-4 h-4" />
+              Edit
+            </button>
+          )}
+          {canDelete && (
+            <button
+              onClick={handleDelete}
+              className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
+            >
+              <Trash2 className="w-4 h-4" />
+              Delete
+            </button>
+          )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-slate-900 border border-slate-800 rounded-lg p-6">
-          <h2 className="text-white text-xl mb-4 flex items-center gap-2">
-            <Package className="w-5 h-5" />
-            Evidence Information
-          </h2>
-          <div className="space-y-4">
-            <div>
-              <label className="text-slate-400 text-sm">Evidence Type</label>
-              <p className="text-white mt-1">{evidenceItem.evidenceType}</p>
-            </div>
+      <div className="bg-slate-900 border border-slate-800 rounded-lg p-6 max-w-3xl">
+        <h2 className="text-white text-xl mb-6">Evidence Information</h2>
+        <div className="space-y-6">
+          <div>
+            <label className="text-slate-400 text-sm flex items-center gap-2">
+              <Package className="w-4 h-4" />
+              Jenis Bukti
+            </label>
+            <p className="text-white mt-1 text-lg">{evidence.jenis_bukti}</p>
+          </div>
+
+          <div>
+            <label className="text-slate-400 text-sm flex items-center gap-2">
+              <MapPin className="w-4 h-4" />
+              Lokasi Penyimpanan
+            </label>
+            <p className="text-white mt-1 font-mono text-sm bg-slate-800 px-3 py-2 rounded">
+              {evidence.lokasi_penyimpanan}
+            </p>
+          </div>
+
+          {evidence.hash_value && (
             <div>
               <label className="text-slate-400 text-sm flex items-center gap-2">
-                <MapPin className="w-4 h-4" />
-                Storage Location
+                <Hash className="w-4 h-4" />
+                Hash Value
               </label>
-              <p className="text-white mt-1">{evidenceItem.storageLocation}</p>
+              <p className="text-white mt-1 font-mono text-xs bg-slate-800 px-3 py-2 rounded break-all">
+                {evidence.hash_value}
+              </p>
             </div>
+          )}
+
+          {evidence.waktu_pengambilan_bukti && (
             <div>
               <label className="text-slate-400 text-sm flex items-center gap-2">
-                <Clock className="w-4 h-4" />
-                Collection Time
+                <Calendar className="w-4 h-4" />
+                Waktu Pengambilan Bukti
               </label>
               <p className="text-white mt-1">
-                {new Date(evidenceItem.collectionTime).toLocaleString('en-US', {
+                {new Date(evidence.waktu_pengambilan_bukti).toLocaleString('id-ID', {
                   year: 'numeric',
                   month: 'long',
                   day: 'numeric',
@@ -102,54 +155,6 @@ export function EvidenceDetail({ evidenceId, onBack, onEdit }: EvidenceDetailPro
                 })}
               </p>
             </div>
-          </div>
-        </div>
-
-        <div className="bg-slate-900 border border-slate-800 rounded-lg p-6">
-          <h2 className="text-white text-xl mb-4 flex items-center gap-2">
-            <Hash className="w-5 h-5" />
-            Hash Value
-          </h2>
-          <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
-            <p className="text-green-400 font-mono text-sm break-all">
-              {evidenceItem.hashValue}
-            </p>
-          </div>
-          <p className="text-slate-500 text-sm mt-3">
-            This hash value ensures the integrity and authenticity of the evidence.
-          </p>
-        </div>
-      </div>
-
-      <div className="bg-slate-900 border border-slate-800 rounded-lg mt-6">
-        <div className="p-6 border-b border-slate-800">
-          <h2 className="text-white text-xl flex items-center gap-2">
-            <FileText className="w-5 h-5" />
-            Linked Case
-          </h2>
-        </div>
-        <div className="p-6">
-          {caseItem ? (
-            <div>
-              <h3 className="text-white text-lg mb-2">{caseItem.caseType}</h3>
-              <p className="text-slate-400 mb-4">{caseItem.caseSummary}</p>
-              <div className="flex items-center gap-4">
-                <span className={`px-3 py-1 rounded-full text-sm ${
-                  caseItem.status.toLowerCase() === 'active'
-                    ? 'bg-green-500/10 text-green-400 border border-green-500/20'
-                    : caseItem.status.toLowerCase() === 'pending'
-                    ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
-                    : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
-                }`}>
-                  {caseItem.status}
-                </span>
-                <span className="text-slate-500 text-sm">
-                  Incident: {new Date(caseItem.incidentDate).toLocaleDateString()}
-                </span>
-              </div>
-            </div>
-          ) : (
-            <p className="text-slate-500">No linked case found</p>
           )}
         </div>
       </div>

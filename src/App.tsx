@@ -25,7 +25,7 @@ type EvidenceView = 'list' | 'detail' | 'create' | 'edit';
 type ActionView = 'list' | 'detail' | 'create' | 'edit';
 
 function MainApp() {
-  const { user } = useApp();
+  const { user, isLoading } = useApp();
   const [authView, setAuthView] = useState<AuthView>('login');
   const [currentPage, setCurrentPage] = useState<MainPage>('dashboard');
   
@@ -146,6 +146,18 @@ function MainApp() {
     setActionView('list');
     setSelectedActionId(null);
   };
+
+  // Show loading state while initializing
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-400">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   // If not authenticated, show auth screens
   if (!user) {

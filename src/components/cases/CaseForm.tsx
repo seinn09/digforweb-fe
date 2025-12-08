@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useApp } from '../../context/AppContext';
 import { ArrowLeft, Save, FileText, Calendar, User, AlertCircle } from 'lucide-react';
+import { kasusService } from '../../services/kasusService';
+import { korbanService } from '../../services/korbanService';
+import type { Victim } from '../../types/api';
 
 interface CaseFormProps {
   caseId?: string;
@@ -8,40 +10,78 @@ interface CaseFormProps {
 }
 
 export function CaseForm({ caseId, onBack }: CaseFormProps) {
-  const { cases, victims, addCase, updateCase } = useApp();
   const isEditing = !!caseId;
-  const caseItem = isEditing ? cases.find(c => c.id === caseId) : null;
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [victims, setVictims] = useState<Victim[]>([]);
 
   const [formData, setFormData] = useState({
-    victimId: '',
-    caseType: '',
-    incidentDate: '',
-    caseSummary: '',
-    status: 'Pending'
+    korban_id: '',
+    jenis_kasus: '',
+    tanggal_kejadian: '',
+    ringkasan_kasus: '',
+    status_kasus: 'pending'
   });
 
   useEffect(() => {
-    if (caseItem) {
-      setFormData({
-        victimId: caseItem.victimId,
-        caseType: caseItem.caseType,
-        incidentDate: caseItem.incidentDate,
-        caseSummary: caseItem.caseSummary,
-        status: caseItem.status
-      });
-    }
-  }, [caseItem]);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
+    fetchVictims();
     if (isEditing && caseId) {
-      updateCase(caseId, formData);
-    } else {
-      addCase(formData);
+      fetchCase();
     }
+  }, [caseId, isEditing]);
 
-    onBack();
+  const fetchVictims = async () => {
+    try {
+      const response = await korbanService.getVictims();
+      const victimsData = Array.isArray(response) ? response : (response as any).data || [];
+      setVictims(victimsData);
+    } catch (err) {
+      console.error('Failed to load victims:', err);
+    }
+  };
+
+  const fetchCase = async () => {
+    try {
+      setLoading(true);
+      const caseData = await kasusService.getCaseById(Number(caseId));
+      setFormData({
+        korban_id: caseData.korban_id.toString(),
+        jenis_kasus: caseData.jenis_kasus,
+        tanggal_kejadian: caseData.tanggal_kejadian,
+        ringkasan_kasus: caseData.ringkasan_kasus || '',
+        status_kasus: caseData.status_kasus
+      });
+    } catch (err: any) {
+      setError('Failed to load case data');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      const submitData = {
+        ...formData,
+        korban_id: Number(formData.korban_id)
+      };
+
+      if (isEditing && caseId) {
+        await kasusService.updateCase(Number(caseId), submitData);
+      } else {
+        await kasusService.createCase(submitData);
+      }
+      onBack();
+    } catch (err: any) {
+      setError(err.message || 'Failed to save case');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -70,125 +110,130 @@ export function CaseForm({ caseId, onBack }: CaseFormProps) {
         </p>
       </div>
 
+      {error && (
+        <div className="mb-4 p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
+          <p className="text-red-400">{error}</p>
+        </div>
+      )}
+
       <div className="bg-slate-900 border border-slate-800 rounded-lg p-6 max-w-2xl">
         {victims.length === 0 && (
           <div className="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg flex items-start gap-2 text-yellow-400">
             <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="mb-1">No victims found</p>
-              <p className="text-sm text-yellow-400/80">You need to create a victim record first before creating a case.</p>
+              <p className="mb-1">Tidak ada korban</p>
+              <p className="text-sm text-yellow-400/80">Anda perlu membuat data korban terlebih dahulu sebelum membuat kasus.</p>
             </div>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label htmlFor="victimId" className="block text-slate-300 mb-2 flex items-center gap-2">
+            <label htmlFor="korban_id" className="block text-slate-300 mb-2 flex items-center gap-2">
               <User className="w-4 h-4" />
-              Select Victim *
+              Pilih Korban *
             </label>
             <select
-              id="victimId"
-              name="victimId"
+              id="korban_id"
+              name="korban_id"
               required
-              value={formData.victimId}
+              value={formData.korban_id}
               onChange={handleChange}
               className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              <option value="">Choose a victim...</option>
+              <option value="">Pilih korban...</option>
               {victims.map(victim => (
                 <option key={victim.id} value={victim.id}>
-                  {victim.name} - {victim.location}
+                  {victim.nama} - {victim.lokasi || 'N/A'}
                 </option>
               ))}
             </select>
           </div>
 
           <div>
-            <label htmlFor="caseType" className="block text-slate-300 mb-2 flex items-center gap-2">
+            <label htmlFor="jenis_kasus" className="block text-slate-300 mb-2 flex items-center gap-2">
               <FileText className="w-4 h-4" />
-              Case Type *
+              Jenis Kasus *
             </label>
             <input
-              id="caseType"
-              name="caseType"
+              id="jenis_kasus"
+              name="jenis_kasus"
               type="text"
               required
-              value={formData.caseType}
+              value={formData.jenis_kasus}
               onChange={handleChange}
               className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="e.g., Email Compromise, Data Theft, Cyberstalking"
+              placeholder="Contoh: Peretasan Email, Pencurian Data, Cyberstalking"
             />
           </div>
 
           <div>
-            <label htmlFor="incidentDate" className="block text-slate-300 mb-2 flex items-center gap-2">
+            <label htmlFor="tanggal_kejadian" className="block text-slate-300 mb-2 flex items-center gap-2">
               <Calendar className="w-4 h-4" />
-              Incident Date *
+              Tanggal Kejadian *
             </label>
             <input
-              id="incidentDate"
-              name="incidentDate"
+              id="tanggal_kejadian"
+              name="tanggal_kejadian"
               type="date"
               required
-              value={formData.incidentDate}
+              value={formData.tanggal_kejadian}
               onChange={handleChange}
               className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
           <div>
-            <label htmlFor="status" className="block text-slate-300 mb-2">
-              Case Status *
+            <label htmlFor="status_kasus" className="block text-slate-300 mb-2">
+              Status Kasus *
             </label>
             <select
-              id="status"
-              name="status"
+              id="status_kasus"
+              name="status_kasus"
               required
-              value={formData.status}
+              value={formData.status_kasus}
               onChange={handleChange}
               className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              <option value="Pending">Pending</option>
-              <option value="Active">Active</option>
-              <option value="Under Investigation">Under Investigation</option>
-              <option value="Completed">Completed</option>
-              <option value="Closed">Closed</option>
+              <option value="pending">Pending</option>
+              <option value="dalam investigasi">Dalam Investigasi</option>
+              <option value="selesai">Selesai</option>
+              <option value="ditutup">Ditutup</option>
             </select>
           </div>
 
           <div>
-            <label htmlFor="caseSummary" className="block text-slate-300 mb-2 flex items-center gap-2">
+            <label htmlFor="ringkasan_kasus" className="block text-slate-300 mb-2 flex items-center gap-2">
               <FileText className="w-4 h-4" />
-              Case Summary *
+              Ringkasan Kasus *
             </label>
             <textarea
-              id="caseSummary"
-              name="caseSummary"
+              id="ringkasan_kasus"
+              name="ringkasan_kasus"
               required
-              value={formData.caseSummary}
+              value={formData.ringkasan_kasus}
               onChange={handleChange}
               rows={6}
               className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-              placeholder="Provide a detailed summary of the case..."
+              placeholder="Berikan ringkasan detail tentang kasus..."
             />
           </div>
 
           <div className="flex gap-3 pt-4">
             <button
               type="submit"
-              disabled={victims.length === 0}
+              disabled={victims.length === 0 || loading}
               className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Save className="w-5 h-5" />
-              {isEditing ? 'Update Case' : 'Create Case'}
+              {loading ? 'Menyimpan...' : (isEditing ? 'Update Kasus' : 'Buat Kasus')}
             </button>
             <button
               type="button"
               onClick={onBack}
               className="px-6 py-3 border border-slate-700 text-slate-300 hover:bg-slate-800 rounded-lg transition-colors"
             >
-              Cancel
+              Batal
             </button>
           </div>
         </form>

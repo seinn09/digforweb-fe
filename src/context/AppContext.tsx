@@ -1,10 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 export interface User {
-  id: string;
+  id: number | string; // Support both API (number) and legacy (string)
   name: string;
   email: string;
   contact?: string;
+  role?: 'petugas' | 'viewer';
 }
 
 export interface Victim {
@@ -50,6 +51,8 @@ export interface ForensicAction {
 
 interface AppContextType {
   user: User | null;
+  isLoading: boolean;
+  setUser: (user: User | null) => void;
   login: (email: string, password: string) => boolean;
   register: (name: string, email: string, password: string, contact: string) => boolean;
   logout: () => void;
@@ -172,6 +175,7 @@ const mockActions: ForensicAction[] = [
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true); // Add loading state
   const [victims, setVictims] = useState<Victim[]>([]);
   const [cases, setCases] = useState<Case[]>([]);
   const [evidence, setEvidence] = useState<Evidence[]>([]);
@@ -210,6 +214,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setForensicActions(mockActions);
       localStorage.setItem('digforweb_actions', JSON.stringify(mockActions));
     }
+    
+    // Loading complete
+    setIsLoading(false);
   }, []);
 
   // Save to localStorage whenever data changes
@@ -381,6 +388,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     <AppContext.Provider
       value={{
         user,
+        isLoading,
+        setUser,
         login,
         register,
         logout,

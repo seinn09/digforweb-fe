@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useApp } from '../../context/AppContext';
 import { ArrowLeft, Save, User, Phone, MapPin, Calendar, FileText } from 'lucide-react';
+import { korbanService } from '../../services/korbanService';
+import type { Victim } from '../../types/api';
 
 interface VictimFormProps {
   victimId?: string;
@@ -8,40 +9,61 @@ interface VictimFormProps {
 }
 
 export function VictimForm({ victimId, onBack }: VictimFormProps) {
-  const { victims, addVictim, updateVictim } = useApp();
   const isEditing = !!victimId;
-  const victim = isEditing ? victims.find(v => v.id === victimId) : null;
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const [formData, setFormData] = useState({
-    name: '',
-    contact: '',
-    location: '',
-    reportDate: '',
-    reportDescription: ''
+    nama: '',
+    kontak: '',
+    lokasi: '',
+    tgl_laporan: '',
+    deskripsi_laporan: ''
   });
 
   useEffect(() => {
-    if (victim) {
-      setFormData({
-        name: victim.name,
-        contact: victim.contact,
-        location: victim.location,
-        reportDate: victim.reportDate,
-        reportDescription: victim.reportDescription
-      });
-    }
-  }, [victim]);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
     if (isEditing && victimId) {
-      updateVictim(victimId, formData);
-    } else {
-      addVictim(formData);
+      fetchVictim();
     }
+  }, [victimId, isEditing]);
 
-    onBack();
+  const fetchVictim = async () => {
+    try {
+      setLoading(true);
+      const victim = await korbanService.getVictimById(Number(victimId));
+      setFormData({
+        nama: victim.nama,
+        kontak: victim.kontak || '',
+        lokasi: victim.lokasi || '',
+        tgl_laporan: victim.tgl_laporan || '',
+        deskripsi_laporan: victim.deskripsi_laporan || ''
+      });
+    } catch (err: any) {
+      setError('Failed to load victim data');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      if (isEditing && victimId) {
+        await korbanService.updateVictim(Number(victimId), formData);
+      } else {
+        await korbanService.createVictim(formData);
+      }
+      onBack();
+    } catch (err: any) {
+      setError(err.message || 'Failed to save victim');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -70,106 +92,113 @@ export function VictimForm({ victimId, onBack }: VictimFormProps) {
         </p>
       </div>
 
+      {error && (
+        <div className="mb-4 p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
+          <p className="text-red-400">{error}</p>
+        </div>
+      )}
+
       <div className="bg-slate-900 border border-slate-800 rounded-lg p-6 max-w-2xl">
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label htmlFor="name" className="block text-slate-300 mb-2 flex items-center gap-2">
+            <label htmlFor="nama" className="block text-slate-300 mb-2 flex items-center gap-2">
               <User className="w-4 h-4" />
-              Full Name *
+              Nama Lengkap *
             </label>
             <input
-              id="name"
-              name="name"
+              id="nama"
+              name="nama"
               type="text"
               required
-              value={formData.name}
+              value={formData.nama}
               onChange={handleChange}
               className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Enter victim's full name"
+              placeholder="Masukkan nama lengkap korban"
             />
           </div>
 
           <div>
-            <label htmlFor="contact" className="block text-slate-300 mb-2 flex items-center gap-2">
+            <label htmlFor="kontak" className="block text-slate-300 mb-2 flex items-center gap-2">
               <Phone className="w-4 h-4" />
-              Contact Number *
+              Nomor Kontak *
             </label>
             <input
-              id="contact"
-              name="contact"
+              id="kontak"
+              name="kontak"
               type="tel"
               required
-              value={formData.contact}
+              value={formData.kontak}
               onChange={handleChange}
               className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="+1-555-0000"
+              placeholder="08123456789"
             />
           </div>
 
           <div>
-            <label htmlFor="location" className="block text-slate-300 mb-2 flex items-center gap-2">
+            <label htmlFor="lokasi" className="block text-slate-300 mb-2 flex items-center gap-2">
               <MapPin className="w-4 h-4" />
-              Location *
+              Lokasi *
             </label>
             <input
-              id="location"
-              name="location"
+              id="lokasi"
+              name="lokasi"
               type="text"
               required
-              value={formData.location}
+              value={formData.lokasi}
               onChange={handleChange}
               className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="City, State/Country"
+              placeholder="Kota, Provinsi"
             />
           </div>
 
           <div>
-            <label htmlFor="reportDate" className="block text-slate-300 mb-2 flex items-center gap-2">
+            <label htmlFor="tgl_laporan" className="block text-slate-300 mb-2 flex items-center gap-2">
               <Calendar className="w-4 h-4" />
-              Report Date *
+              Tanggal Laporan *
             </label>
             <input
-              id="reportDate"
-              name="reportDate"
+              id="tgl_laporan"
+              name="tgl_laporan"
               type="date"
               required
-              value={formData.reportDate}
+              value={formData.tgl_laporan}
               onChange={handleChange}
               className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
           <div>
-            <label htmlFor="reportDescription" className="block text-slate-300 mb-2 flex items-center gap-2">
+            <label htmlFor="deskripsi_laporan" className="block text-slate-300 mb-2 flex items-center gap-2">
               <FileText className="w-4 h-4" />
-              Report Description *
+              Deskripsi Laporan *
             </label>
             <textarea
-              id="reportDescription"
-              name="reportDescription"
+              id="deskripsi_laporan"
+              name="deskripsi_laporan"
               required
-              value={formData.reportDescription}
+              value={formData.deskripsi_laporan}
               onChange={handleChange}
               rows={6}
               className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-              placeholder="Describe the incident or report details..."
+              placeholder="Jelaskan detail kejadian atau laporan..."
             />
           </div>
 
           <div className="flex gap-3 pt-4">
             <button
               type="submit"
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors"
+              disabled={loading}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Save className="w-5 h-5" />
-              {isEditing ? 'Update Victim' : 'Create Victim'}
+              {loading ? 'Menyimpan...' : (isEditing ? 'Update Korban' : 'Buat Korban')}
             </button>
             <button
               type="button"
               onClick={onBack}
               className="px-6 py-3 border border-slate-700 text-slate-300 hover:bg-slate-800 rounded-lg transition-colors"
             >
-              Cancel
+              Batal
             </button>
           </div>
         </form>

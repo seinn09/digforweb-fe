@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { Shield, Mail, Lock, AlertCircle } from 'lucide-react';
+import { authService } from '../../services/authService';
 
 interface LoginProps {
   onSuccess: () => void;
@@ -8,12 +9,13 @@ interface LoginProps {
 }
 
 export function Login({ onSuccess, onSwitchToRegister }: LoginProps) {
-  const { login } = useApp();
+  const { setUser } = useApp();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -22,11 +24,26 @@ export function Login({ onSuccess, onSwitchToRegister }: LoginProps) {
       return;
     }
 
-    const success = login(email, password);
-    if (success) {
+    setLoading(true);
+    try {
+      console.log('Attempting login with:', email);
+      const response = await authService.login({ email, password });
+      console.log('Login successful, response:', response);
+      console.log('User data:', response.user);
+      
+      // Save user to context
+      setUser(response.user);
+      
+      // Save user to localStorage for session persistence
+      localStorage.setItem('digforweb_user', JSON.stringify(response.user));
+      
+      console.log('User set in context and localStorage');
       onSuccess();
-    } else {
-      setError('Invalid email or password');
+    } catch (err: any) {
+      console.error('Login error:', err);
+      setError(err.message || 'Invalid email or password');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -88,12 +105,13 @@ export function Login({ onSuccess, onSwitchToRegister }: LoginProps) {
 
             <button
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg transition-colors"
+              disabled={loading}
+              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed text-white py-3 rounded-lg transition-colors"
             >
-              Sign In
+              {loading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
-
+{/* 
           <div className="mt-6 text-center">
             <p className="text-slate-400">
               Don{"'"}t have an account?{' '}
@@ -104,8 +122,8 @@ export function Login({ onSuccess, onSwitchToRegister }: LoginProps) {
                 Register here
               </button>
             </p>
-          </div>
-
+          </div> */}
+{/* 
           <div className="mt-6 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
             <p className="text-blue-300 text-sm">
               <strong>Demo credentials:</strong>
@@ -114,7 +132,7 @@ export function Login({ onSuccess, onSwitchToRegister }: LoginProps) {
               <br />
               Password: admin123
             </p>
-          </div>
+          </div> */}
         </div>
       </div>
     </div>

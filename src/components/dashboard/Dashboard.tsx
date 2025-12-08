@@ -1,143 +1,218 @@
-import React from 'react';
-import { useApp } from '../../context/AppContext';
-import { FolderOpen, Users, Package, Activity, TrendingUp, Clock } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Briefcase, Users, Package, Activity, Clock, Loader2 } from 'lucide-react';
+import { korbanService } from '../../services/korbanService';
+import { kasusService } from '../../services/kasusService';
+import { evidenceService } from '../../services/evidenceService';
+import { tindakanService } from '../../services/tindakanService';
+import type { Victim, Case, Evidence, ForensicAction } from '../../types/api';
 
-export function Dashboard() {
-  const { cases, victims, evidence, forensicActions } = useApp();
+type DashboardProps = {
+  onNavigate: (view: string, id?: string) => void;
+};
 
-  const activeCases = cases.filter(c => c.status.toLowerCase() === 'active').length;
+type ActivityItem = {
+  id: number;
+  type: 'case' | 'evidence' | 'action';
+  label: string;
+  created_at: string;
+  title: string;
+  subtitle: string;
+  view: string;
+};
 
-  const recentActivities = [
-    ...cases.slice(-3).map(c => ({
+export function Dashboard({ onNavigate }: DashboardProps) {
+  const [loading, setLoading] = useState(true);
+  const [victims, setVictims] = useState<Victim[]>([]);
+  const [cases, setCases] = useState<Case[]>([]);
+  const [evidence, setEvidence] = useState<Evidence[]>([]);
+  const [actions, setActions] = useState<ForensicAction[]>([]);
+
+  useEffect(() => {
+    fetchAllData();
+  }, []);
+
+  const fetchAllData = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch all data in parallel
+      const [victimsRes, casesRes, evidenceRes, actionsRes] = await Promise.all([
+        korbanService.getVictims(),
+        kasusService.getCases(),
+        evidenceService.getEvidence(),
+        tindakanService.getActions()
+      ]);
+
+      // Handle wrapped responses
+      setVictims(Array.isArray(victimsRes) ? victimsRes : (victimsRes as any).data || []);
+      setCases(Array.isArray(casesRes) ? casesRes : (casesRes as any).data || []);
+      setEvidence(Array.isArray(evidenceRes) ? evidenceRes : (evidenceRes as any).data || []);
+      setActions(Array.isArray(actionsRes) ? actionsRes : (actionsRes as any).data || []);
+    } catch (err) {
+      console.error('Failed to fetch dashboard data:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const activeCases = cases.filter(c => 
+    c.status_kasus.toLowerCase().includes('investigasi') || 
+    c.status_kasus.toLowerCase() === 'aktif'
+  ).length;
+
+  // Combine all activities
+  const recentActivity: ActivityItem[] = [
+    ...cases.map(c => ({
       id: c.id,
-      type: 'Case',
-      description: `Case "${c.caseType}" created`,
-      timestamp: c.createdAt
+      type: 'case' as const,
+      label: 'Kasus Dibuat',
+      created_at: c.created_at,
+      title: c.jenis_kasus,
+      subtitle: c.korban?.nama || 'N/A',
+      view: 'case-detail'
     })),
-    ...forensicActions.slice(-3).map(a => ({
+    ...evidence.map(e => ({
+      id: e.id,
+      type: 'evidence' as const,
+      label: 'Bukti Ditambahkan',
+      created_at: e.created_at,
+      title: e.jenis_bukti,
+      subtitle: e.kasus?.jenis_kasus || 'N/A',
+      view: 'evidence-detail'
+    })),
+    ...actions.map(a => ({
       id: a.id,
-      type: 'Action',
-      description: `${a.forensicStage} - ${a.status}`,
-      timestamp: a.createdAt
+      type: 'action' as const,
+      label: 'Tindakan Dicatat',
+      created_at: a.created_at,
+      title: a.tahap_forensik,
+      subtitle: a.kasus?.jenis_kasus || 'N/A',
+      view: 'forensic-action-detail'
     }))
   ]
-    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-    .slice(0, 5);
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .slice(0, 8);
 
   const stats = [
     {
-      id: 1,
-      label: 'Total Cases',
+      label: 'Total Kasus',
       value: cases.length,
-      icon: FolderOpen,
-      color: 'bg-blue-500',
-      bgColor: 'bg-blue-500/10',
-      borderColor: 'border-blue-500/20'
+      icon: Briefcase,
+      color: 'cyan',
+      bgColor: 'bg-cyan-950/50',
+      borderColor: 'border-cyan-800',
+      textColor: 'text-cyan-400'
     },
     {
-      id: 2,
-      label: 'Active Cases',
+      label: 'Kasus Aktif',
       value: activeCases,
-      icon: TrendingUp,
-      color: 'bg-green-500',
-      bgColor: 'bg-green-500/10',
-      borderColor: 'border-green-500/20'
+      icon: Activity,
+      color: 'green',
+      bgColor: 'bg-green-950/50',
+      borderColor: 'border-green-800',
+      textColor: 'text-green-400'
     },
     {
-      id: 3,
-      label: 'Total Evidence',
+      label: 'Total Bukti',
       value: evidence.length,
       icon: Package,
-      color: 'bg-purple-500',
-      bgColor: 'bg-purple-500/10',
-      borderColor: 'border-purple-500/20'
+      color: 'blue',
+      bgColor: 'bg-blue-950/50',
+      borderColor: 'border-blue-800',
+      textColor: 'text-blue-400'
     },
     {
-      id: 4,
-      label: 'Total Victims',
+      label: 'Total Korban',
       value: victims.length,
       icon: Users,
-      color: 'bg-cyan-500',
-      bgColor: 'bg-cyan-500/10',
-      borderColor: 'border-cyan-500/20'
+      color: 'purple',
+      bgColor: 'bg-purple-950/50',
+      borderColor: 'border-purple-800',
+      textColor: 'text-purple-400'
     }
   ];
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString('id-ID', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+        <span className="ml-3 text-slate-400">Loading dashboard...</span>
+      </div>
+    );
+  }
+
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-white text-3xl mb-2">Dashboard</h1>
-        <p className="text-slate-400">Overview of your forensic cases and activities</p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {stats.map((stat) => {
-          const Icon = stat.icon;
-          return (
-            <div
-              key={stat.id}
-              className={`${stat.bgColor} border ${stat.borderColor} rounded-lg p-6`}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className={`${stat.color} w-12 h-12 rounded-lg flex items-center justify-center`}>
-                  <Icon className="w-6 h-6 text-white" />
-                </div>
-              </div>
-              <div>
-                <p className="text-slate-400 text-sm mb-1">{stat.label}</p>
-                <p className="text-white text-3xl">{stat.value}</p>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="bg-slate-900 border border-slate-800 rounded-lg">
-        <div className="p-6 border-b border-slate-800">
-          <div className="flex items-center gap-2">
-            <Clock className="w-5 h-5 text-blue-400" />
-            <h2 className="text-white text-xl">Recent Activity</h2>
-          </div>
+    <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-3xl font-bold text-cyan-400 mb-2">Dashboard</h1>
+          <p className="text-slate-400">Ikhtisar sistem manajemen forensik digital</p>
         </div>
-        <div className="divide-y divide-slate-800">
-          {recentActivities.length > 0 ? (
-            recentActivities.map((activity, index) => (
-              <div key={`${activity.type}-${activity.id}-${index}`} className="p-4 hover:bg-slate-800/50 transition-colors">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-3">
-                    <div className={`w-2 h-2 rounded-full mt-2 ${
-                      activity.type === 'Case' ? 'bg-blue-400' : 'bg-green-400'
-                    }`} />
-                    <div>
-                      <p className="text-white">{activity.description}</p>
-                      <p className="text-slate-500 text-sm mt-1">{activity.type}</p>
-                    </div>
-                  </div>
-                  <span className="text-slate-500 text-sm">{formatDate(activity.timestamp)}</span>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {stats.map((stat) => {
+            const Icon = stat.icon;
+            return (
+              <div
+                key={stat.label}
+                className={`${stat.bgColor} border ${stat.borderColor} rounded-lg p-6`}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <Icon className={`w-8 h-8 ${stat.textColor}`} />
+                </div>
+                <div>
+                  <p className="text-3xl mb-1">{stat.value}</p>
+                  <p className="text-slate-400 text-sm">{stat.label}</p>
                 </div>
               </div>
-            ))
-          ) : (
-            <div className="p-8 text-center text-slate-500">
-              No recent activity
+            );
+          })}
+        </div>
+
+        <div className="bg-slate-900 border border-slate-800 rounded-lg p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-xl font-bold text-cyan-400 mb-1">Aktivitas Terbaru</h3>
+              <p className="text-slate-400 text-sm">Update terbaru dari semua modul</p>
             </div>
-          )}
+            <Clock className="w-5 h-5 text-slate-500" />
+          </div>
+
+          <div className="space-y-3">
+            {recentActivity.length === 0 ? (
+              <p className="text-slate-500 text-center py-8">Belum ada aktivitas</p>
+            ) : (
+              recentActivity.map((item) => (
+                <button
+                  key={`${item.type}-${item.id}`}
+                  onClick={() => onNavigate(item.view, item.id.toString())}
+                  className="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg p-4 transition-colors text-left"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-1">
+                        <span className="text-cyan-400 text-sm px-2 py-1 bg-cyan-950/50 rounded">
+                          {item.label}
+                        </span>
+                        <span className="text-white">{item.title}</span>
+                      </div>
+                      <p className="text-slate-400 text-sm">{item.subtitle}</p>
+                    </div>
+                    <span className="text-slate-500 text-sm">{formatDate(item.created_at)}</span>
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
         </div>
       </div>
     </div>
