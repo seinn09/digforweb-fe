@@ -14,4 +14,9 @@ cp .env.example .env
 
 Run `npm i` to install the dependencies.
 
+```
+npm install react react-dom
+npm install -D @types/react @types/react-dom
+```
+
 Run `npm run dev` to start the development server.
