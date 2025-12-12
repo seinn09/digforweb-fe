@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useIsMobile } from './hooks/useIsMobile';
 import { AppProvider, useApp } from './context/AppContext';
 import { Login } from './components/auth/Login';
 import { Register } from './components/auth/Register';
@@ -16,18 +17,22 @@ import { EvidenceForm } from './components/evidence/EvidenceForm';
 import { ActionList } from './components/actions/ActionList';
 import { ActionDetail } from './components/actions/ActionDetail';
 import { ActionForm } from './components/actions/ActionForm';
+import { PanelLeft } from 'lucide-react';
+import { Sheet, SheetContent, SheetTrigger } from './components/ui/sheet';
 
-type AuthView = 'login' | 'register';
-type MainPage = 'dashboard' | 'victims' | 'cases' | 'evidence' | 'actions';
-type VictimView = 'list' | 'detail' | 'create' | 'edit';
-type CaseView = 'list' | 'detail' | 'create' | 'edit';
-type EvidenceView = 'list' | 'detail' | 'create' | 'edit';
-type ActionView = 'list' | 'detail' | 'create' | 'edit';
+// ... (type definitions)
 
 function MainApp() {
   const { user, isLoading } = useApp();
   const [authView, setAuthView] = useState<AuthView>('login');
   const [currentPage, setCurrentPage] = useState<MainPage>('dashboard');
+  
+  const isMobile = useIsMobile();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(!isMobile);
+
+  useEffect(() => {
+    setIsSidebarOpen(!isMobile);
+  }, [isMobile]);
   
   // Victim navigation state
   const [victimView, setVictimView] = useState<VictimView>('list');
@@ -51,6 +56,9 @@ function MainApp() {
 
   const handleNavigate = (page: string) => {
     setCurrentPage(page as MainPage);
+    if (isMobile) {
+      setIsSidebarOpen(false);
+    }
     
     // Reset sub-views when switching pages
     setVictimView('list');
@@ -341,11 +349,70 @@ function MainApp() {
   };
 
   return (
-    <div className="flex h-screen bg-slate-950 overflow-hidden">
-      <Sidebar currentPage={currentPage} onNavigate={handleNavigate} />
-      <div className="flex-1 overflow-y-auto">
-        {renderContent()}
-      </div>
+    <div className="bg-slate-950 text-white">
+      {isMobile ? (
+        <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
+          <div className="flex flex-col">
+            <header className="bg-slate-900 border-b border-slate-800 px-4 sm:px-6 py-4 flex items-center justify-between flex-shrink-0">
+              <div className="flex items-center gap-4">
+                <SheetTrigger asChild>
+                  <button className="text-slate-400 hover:text-white" title="Toggle sidebar">
+                    <PanelLeft className="w-6 h-6" />
+                  </button>
+                </SheetTrigger>
+                <div>
+                  <h1 className="text-lg font-semibold text-white">
+                    {currentPage.charAt(0).toUpperCase() + currentPage.slice(1)}
+                  </h1>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center font-bold text-white">
+                  {user?.name.charAt(0).toUpperCase()}
+                </div>
+              </div>
+            </header>
+            <main className="flex-1 overflow-y-auto p-4 sm:p-6 h-[calc(100vh-69px)]">
+              {renderContent()}
+            </main>
+          </div>
+          <SheetContent side="left" className="bg-slate-900 border-r-slate-800 p-0 w-[280px] flex flex-col">
+            <Sidebar isSidebarOpen={true} currentPage={currentPage} onNavigate={handleNavigate} />
+          </SheetContent>
+        </Sheet>
+      ) : (
+        <div className="flex h-screen overflow-hidden">
+          <div className={`bg-slate-900 border-r border-slate-800 flex-col h-screen transition-all duration-300 ease-in-out overflow-x-hidden ${isSidebarOpen ? 'w-64' : 'w-20'} flex`}>
+            <Sidebar isSidebarOpen={isSidebarOpen} currentPage={currentPage} onNavigate={handleNavigate} />
+          </div>
+          <div className="flex flex-col flex-1">
+            <header className="bg-slate-900 border-b border-slate-800 px-6 py-4 flex items-center justify-between flex-shrink-0">
+              <div className="flex items-center gap-4">
+                <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="text-slate-400 hover:text-white" title="Toggle sidebar">
+                  <PanelLeft className="w-6 h-6" />
+                </button>
+                <div>
+                  <h1 className="text-lg font-semibold text-white">
+                    {currentPage.charAt(0).toUpperCase() + currentPage.slice(1)}
+                  </h1>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="text-right">
+                  <p className="text-sm font-medium text-cyan-400">{user?.name}</p>
+                  <p className="text-xs text-slate-400">{user?.email}</p>
+                </div>
+                <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold text-white">
+                  {user?.name.charAt(0).toUpperCase()}
+                </div>
+              </div>
+            </header>
+            <main className="flex-1 overflow-y-auto p-6">
+              {renderContent()}
+            </main>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

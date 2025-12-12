@@ -98,15 +98,15 @@ export function CaseForm({ caseId, onBack }: CaseFormProps) {
         className="flex items-center gap-2 text-slate-400 hover:text-white mb-6 transition-colors"
       >
         <ArrowLeft className="w-5 h-5" />
-        Back to Cases
+        Kembali ke Manajemen Kasus
       </button>
 
       <div className="mb-8">
         <h1 className="text-white text-3xl mb-2">
-          {isEditing ? 'Edit Case' : 'Add New Case'}
+          {isEditing ? 'Sunting Kasus' : 'Tambah Kasus'}
         </h1>
         <p className="text-slate-400">
-          {isEditing ? 'Update case information' : 'Create a new forensic case'}
+          {isEditing ? 'Perbarui informasi kasus' : 'Buat kasus forensik baru'}
         </p>
       </div>
 
