@@ -31,7 +31,7 @@ export function Sidebar({ currentPage, onNavigate, isSidebarOpen }: SidebarProps
   ];
 
   return (
-    <div className={`bg-slate-900 border-r border-slate-800 flex flex-col h-screen transition-all duration-300 ease-in-out overflow-x-hidden ${isSidebarOpen ? 'w-64' : 'w-20'}`}>
+    <>
       <div className={`p-6 border-b border-slate-800 flex items-center ${isSidebarOpen ? 'justify-start' : 'justify-center'}`}>
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -97,6 +97,6 @@ export function Sidebar({ currentPage, onNavigate, isSidebarOpen }: SidebarProps
           </AlertDialogContent>
         </AlertDialog>
       </div>
-    </div>
+    </>
   );
 }
