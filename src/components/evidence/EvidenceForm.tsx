@@ -103,15 +103,15 @@ export function EvidenceForm({ evidenceId, onBack }: EvidenceFormProps) {
         className="flex items-center gap-2 text-slate-400 hover:text-white mb-6 transition-colors"
       >
         <ArrowLeft className="w-5 h-5" />
-        Back to Evidence
+        Kembali ke Manajemen Bukti
       </button>
 
       <div className="mb-8">
         <h1 className="text-white text-3xl mb-2">
-          {isEditing ? 'Edit Evidence' : 'Add New Evidence'}
+          {isEditing ? 'Sunting Bukti' : 'Tambah Bukti'}
         </h1>
         <p className="text-slate-400">
-          {isEditing ? 'Update evidence information' : 'Create a new evidence record'}
+          {isEditing ? 'Perbarui informasi bukti' : 'Buat data bukti baru'}
         </p>
       </div>
 

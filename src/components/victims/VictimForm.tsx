@@ -80,15 +80,15 @@ export function VictimForm({ victimId, onBack }: VictimFormProps) {
         className="flex items-center gap-2 text-slate-400 hover:text-white mb-6 transition-colors"
       >
         <ArrowLeft className="w-5 h-5" />
-        Back to Victims
+        Kembali ke Manajemen Korban
       </button>
 
       <div className="mb-8">
         <h1 className="text-white text-3xl mb-2">
-          {isEditing ? 'Edit Victim' : 'Add New Victim'}
+          {isEditing ? 'Sunting Korban' : 'Tambah Korban'}
         </h1>
         <p className="text-slate-400">
-          {isEditing ? 'Update victim information' : 'Create a new victim record'}
+          {isEditing ? 'Perbarui informasi korban' : 'Buat data korban baru'}
         </p>
       </div>
 

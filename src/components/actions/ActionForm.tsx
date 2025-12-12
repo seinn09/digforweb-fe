@@ -106,15 +106,15 @@ export function ActionForm({ actionId, onBack }: ActionFormProps) {
         className="flex items-center gap-2 text-slate-400 hover:text-white mb-6 transition-colors"
       >
         <ArrowLeft className="w-5 h-5" />
-        Back to Forensic Actions
+        Kembali ke Manajemen Tindakan Forensik
       </button>
 
       <div className="mb-8">
         <h1 className="text-white text-3xl mb-2">
-          {isEditing ? 'Edit Forensic Action' : 'Add New Forensic Action'}
+          {isEditing ? 'Sunting Tindakan Forensik' : 'Tambah Tindakan Forensik'}
         </h1>
         <p className="text-slate-400">
-          {isEditing ? 'Update forensic action information' : 'Create a new forensic action record'}
+          {isEditing ? 'Perbarui informasi tindakan forensik' : 'Buat data tindakan forensik baru'}
         </p>
       </div>
 

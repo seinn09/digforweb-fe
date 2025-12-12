@@ -1,6 +1,17 @@
 import React from 'react';
 import { Shield, LayoutDashboard, Users, FolderOpen, Package, Activity, LogOut } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '../../components/ui/alert-dialog';
 
 interface SidebarProps {
   currentPage: string;
@@ -61,15 +72,30 @@ export function Sidebar({ currentPage, onNavigate, isSidebarOpen }: SidebarProps
       </div>
 
       <div className={`border-t border-slate-800 ${isSidebarOpen ? 'p-4' : 'p-2'}`}>
-        <button
-          onClick={logout}
-          className={`w-full flex items-center py-3 rounded-lg transition-colors text-red-400 hover:bg-red-500/10 ${isSidebarOpen ? 'px-4' : 'px-2'} ${!isSidebarOpen && 'justify-center'}`}
-        >
-          <LogOut className="w-5 h-5 flex-shrink-0" />
-          <span className={`transition-all duration-200 whitespace-nowrap ${isSidebarOpen ? 'ml-3 opacity-100' : 'ml-0 w-0 opacity-0'}`}>
-            Keluar
-          </span>
-        </button>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <button
+              className={`w-full flex items-center py-3 rounded-lg transition-colors text-red-400 hover:bg-red-500/10 ${isSidebarOpen ? 'px-4' : 'px-2'} ${!isSidebarOpen && 'justify-center'}`}
+            >
+              <LogOut className="w-5 h-5 flex-shrink-0" />
+              <span className={`transition-all duration-200 whitespace-nowrap ${isSidebarOpen ? 'ml-3 opacity-100' : 'ml-0 w-0 opacity-0'}`}>
+                Keluar
+              </span>
+            </button>
+          </AlertDialogTrigger>
+          <AlertDialogContent className="bg-slate-900 border-slate-700 text-white">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Konfirmasi Keluar</AlertDialogTitle>
+              <AlertDialogDescription className="text-slate-400">
+                Apakah Anda yakin ingin keluar?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel className="bg-transparent hover:bg-slate-800 text-slate-100 border-slate-700">Batal</AlertDialogCancel>
+              <AlertDialogAction onClick={logout} className="bg-red-600 hover:bg-red-700 text-white">Keluar</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
