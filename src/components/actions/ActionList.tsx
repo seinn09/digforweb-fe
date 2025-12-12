@@ -69,8 +69,12 @@ export function ActionList({ onViewDetail, onEdit, onCreate }: ActionListProps) 
     <div className="p-8">
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-white text-3xl mb-2">Forensic Actions</h1>
-          <p className="text-slate-400">Track forensic investigation actions and progress</p>
+          <h1 className="text-white text-3xl mb-2">Tindakan Forensik</h1>
+          <p className="text-slate-400">
+            {isViewer
+              ? 'Disini Anda dapat melihat data dan informasi tindakan forensik'
+              : 'Disini Anda dapat mengelola data dan informasi tindakan forensik'}
+          </p>
         </div>
         {canCreate && (
           <button
@@ -78,7 +82,7 @@ export function ActionList({ onViewDetail, onEdit, onCreate }: ActionListProps) 
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
           >
             <Plus className="w-5 h-5" />
-            Add Action
+            Tambah Tindakan
           </button>
         )}
       </div>

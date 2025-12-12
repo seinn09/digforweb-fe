@@ -5,6 +5,7 @@ import { kasusService } from '../../services/kasusService';
 import { evidenceService } from '../../services/evidenceService';
 import { tindakanService } from '../../services/tindakanService';
 import type { Victim, Case, Evidence, ForensicAction } from '../../types/api';
+import { useApp } from '../../context/AppContext';
 
 type DashboardProps = {
   onNavigate: (view: string, id?: string) => void;
@@ -21,6 +22,7 @@ type ActivityItem = {
 };
 
 export function Dashboard({ onNavigate }: DashboardProps) {
+  const { user } = useApp();
   const [loading, setLoading] = useState(true);
   const [victims, setVictims] = useState<Victim[]>([]);
   const [cases, setCases] = useState<Case[]>([]);
@@ -154,8 +156,8 @@ export function Dashboard({ onNavigate }: DashboardProps) {
     <div className="max-w-7xl mx-auto px-6 py-8">
       <div className="space-y-8">
         <div>
-          <h1 className="text-3xl font-bold text-cyan-400 mb-2">Dashboard</h1>
-          <p className="text-slate-400">Ikhtisar sistem manajemen forensik digital</p>
+          <h1 className="text-3xl font-bold mb-2">Selamat datang kembali, <span className="text-cyan-400">{user?.name}</span></h1>
+          <p className="text-slate-400">Berikut adalah ringkasan aktivitas terbaru dan statistik sistem digital forensik Anda.</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

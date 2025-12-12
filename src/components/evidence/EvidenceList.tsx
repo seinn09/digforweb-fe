@@ -68,8 +68,12 @@ export function EvidenceList({ onViewDetail, onEdit, onCreate }: EvidenceListPro
     <div className="p-8">
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-white text-3xl mb-2">Evidence Management</h1>
-          <p className="text-slate-400">Track and manage digital evidence</p>
+          <h1 className="text-white text-3xl mb-2">Manajemen Bukti</h1>
+          <p className="text-slate-400">
+            {isViewer
+              ? 'Disini Anda dapat melihat data dan informasi bukti'
+              : 'Disini Anda dapat mengelola data dan informasi bukti'}
+          </p>  
         </div>
         {canCreate && (
           <button
@@ -77,7 +81,7 @@ export function EvidenceList({ onViewDetail, onEdit, onCreate }: EvidenceListPro
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
           >
             <Plus className="w-5 h-5" />
-            Add Evidence
+            Tambah Bukti
           </button>
         )}
       </div>

@@ -16,6 +16,7 @@ import { EvidenceForm } from './components/evidence/EvidenceForm';
 import { ActionList } from './components/actions/ActionList';
 import { ActionDetail } from './components/actions/ActionDetail';
 import { ActionForm } from './components/actions/ActionForm';
+import { PanelLeft } from 'lucide-react';
 
 type AuthView = 'login' | 'register';
 type MainPage = 'dashboard' | 'victims' | 'cases' | 'evidence' | 'actions';
@@ -28,6 +29,7 @@ function MainApp() {
   const { user, isLoading } = useApp();
   const [authView, setAuthView] = useState<AuthView>('login');
   const [currentPage, setCurrentPage] = useState<MainPage>('dashboard');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   
   // Victim navigation state
   const [victimView, setVictimView] = useState<VictimView>('list');
@@ -341,10 +343,36 @@ function MainApp() {
   };
 
   return (
-    <div className="flex h-screen bg-slate-950 overflow-hidden">
-      <Sidebar currentPage={currentPage} onNavigate={handleNavigate} />
-      <div className="flex-1 overflow-y-auto">
-        {renderContent()}
+    <div className="flex h-screen bg-slate-950 text-white overflow-hidden">
+      <Sidebar 
+        currentPage={currentPage} 
+        onNavigate={handleNavigate}
+        isSidebarOpen={isSidebarOpen}
+      />
+      <div className={`flex flex-col flex-1 transition-all duration-300 ease-in-out`}>
+        <header className="bg-slate-900 border-b border-slate-800 px-6 py-4 flex items-center justify-between flex-shrink-0">
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
+              className="text-slate-400 hover:text-white"
+              title="Toggle sidebar"
+            >
+              <PanelLeft className="w-6 h-6" />
+            </button>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="text-right">
+              <p className="text-sm font-medium text-white-400">{user?.name}</p>
+              <p className="text-xs text-slate-400">{user?.email}</p>
+            </div>
+            <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold text-white">
+              {user?.name.charAt(0).toUpperCase()}
+            </div>
+          </div>
+        </header>
+        <main className="flex-1 overflow-y-auto p-6">
+          {renderContent()}
+        </main>
       </div>
     </div>
   );

@@ -68,8 +68,12 @@ export function CaseList({ onViewDetail, onEdit, onCreate }: CaseListProps) {
     <div className="p-8">
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-white text-3xl mb-2">Case Management</h1>
-          <p className="text-slate-400">Manage forensic cases and investigations</p>
+          <h1 className="text-white text-3xl mb-2">Manajemen Kasus</h1>
+          <p className="text-slate-400">
+            {isViewer
+              ? 'Disini Anda dapat melihat data dan informasi kasus'
+              : 'Disini Anda dapat mengelola data dan informasi kasus'}
+          </p>
         </div>
         {canCreate && (
           <button
@@ -77,7 +81,7 @@ export function CaseList({ onViewDetail, onEdit, onCreate }: CaseListProps) {
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
           >
             <Plus className="w-5 h-5" />
-            Add Case
+            Tambah Kasus
           </button>
         )}
       </div>
